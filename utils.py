@@ -11,6 +11,7 @@ def na_catfiller(df):
         if j == "object":
             objectCols.append(i)
     df[objectCols] = df[objectCols].fillna("unknown")
+    return df
 
 def na_filler(df, aggregation_func="mean"):
     """
