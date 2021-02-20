@@ -13,7 +13,7 @@ def na_catfiller(df):
     df[objectCols] = df[objectCols].fillna("unknown")
     return df
 
-def na_filler(df, aggregation_func="mean"):
+def na_numfiller(df, aggregation_func="mean"):
     """
     This function identifies non-categorical features, then identifies
      non-Boolean features within the resulting list of features, and
