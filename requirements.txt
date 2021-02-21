@@ -3,3 +3,4 @@ dash_bootstrap_components==0.11.3
 pandas==1.1.3
 sklearn
 hurry.filesize==0.9
+psutil==5.7.2
