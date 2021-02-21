@@ -15,6 +15,7 @@ import glob
 import ntpath
 import re
 
+
 iris_raw = datasets.load_iris()
 iris = pd.DataFrame(iris_raw["data"], columns=iris_raw["feature_names"])
 
@@ -27,6 +28,8 @@ dfs = {}
     # dfs[df_name] = pd.read_csv(f"{data_dir}{df_name}.csv")
 
 app = dash.Dash(external_stylesheets=[dbc.themes.BOOTSTRAP])
+
+server = app.server
 
 controls = dbc.Card(
     [
