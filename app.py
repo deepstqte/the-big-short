@@ -22,8 +22,8 @@ data_dir = "data/"
 dataset_names = [re.sub('\.csv$', '', ntpath.basename(p)) for p in glob.glob(data_dir + "*.csv")]
 
 dfs = {}
-for df_name in dataset_names:
-    dfs[df_name] = pd.read_csv(f"{data_dir}{df_name}.csv")
+# for df_name in dataset_names:
+#     dfs[df_name] = pd.read_csv(f"{data_dir}{df_name}.csv")
 
 app = dash.Dash(external_stylesheets=[dbc.themes.BOOTSTRAP])
 
