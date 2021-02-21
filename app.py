@@ -15,9 +15,6 @@ import glob
 import ntpath
 import re
 
-iris_raw = datasets.load_iris()
-iris = pd.DataFrame(iris_raw["data"], columns=iris_raw["feature_names"])
-
 data_dir = "data/"
 
 dataset_names = [re.sub('\.csv$', '', ntpath.basename(p)) for p in glob.glob(data_dir + "*.csv")]
@@ -63,7 +60,7 @@ controls = dbc.Card(
                 dbc.Input(id="method-switch", type="number", value=10),
             ]
         ),
-        dbc.Button("Go for it.", id="go-for-it", size="lg", outline=True, color="primary"),
+        dbc.Button("Go.", id="go-for-it", size="lg", outline=True, color="primary"),
     ],
     body=True,
 )
