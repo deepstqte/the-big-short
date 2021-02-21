@@ -14,14 +14,16 @@ from sklearn import datasets
 import glob
 import ntpath
 import re
+import os, psutil
+from hurry.filesize import size
 
 data_dir = "data/"
 
 dataset_names = [re.sub('\.csv$', '', ntpath.basename(p)) for p in glob.glob(data_dir + "*.csv")]
 
 dfs = {}
-# for df_name in dataset_names:
-    # dfs[df_name] = pd.read_csv(f"{data_dir}{df_name}.csv")
+for df_name in dataset_names:
+    dfs[df_name] = pd.read_csv(f"{data_dir}{df_name}.csv")
 
 app = dash.Dash(external_stylesheets=[dbc.themes.BOOTSTRAP])
 
@@ -91,8 +93,11 @@ app.layout = dbc.Container(
 )
 def make_graph(n_clicks, datasets, numfiller_func, method_switch):
     if n_clicks:
+        process = psutil.Process(os.getpid())
+        memory_usage = size(process.memory_info().rss)
         datasets_str = ", ".join(datasets)
         output = html.Ul(children=[
+            html.Li(f"Memory Usage: {memory_usage}"),
             html.Li(f"The selected datasets: {datasets_str}"),
             html.Li(f"The aggregation function used to fill numeric empty values: {numfiller_func}"),
             html.Li(f"The threshold of number of unique values used to decide whether to use One-Hot or Label encoding: {method_switch}"),
