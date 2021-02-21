@@ -2,15 +2,21 @@ from sklearn.preprocessing import LabelEncoder
 
 def na_catfiller(df):
     """
-    This function identifies categorical features, then replaces
-    missing values with "unknown" value.
+    This function identifies categorical and Boolean features, 
+    then replaces missing values with "missing_data" value.
     :param df:
     """
     objectCols = []
     for i, j in zip(df.dtypes.index, df.dtypes.values):
         if j == "object":
             objectCols.append(i)
-    df[objectCols] = df[objectCols].fillna("unknown")
+    booleanCols = []
+    for i, j in zip(df.dtypes.index, df.nunique()):
+        if j == 2:
+            booleanCols.append(i)
+
+    df[objectCols] = df[objectCols].fillna("missing_data")
+    df[booleanCols] = df[booleanCols].fillna("missing_data")
     return df
 
 def na_numfiller(df, aggregation_func="mean"):
