@@ -47,7 +47,7 @@ controls = dbc.Card(
         ),
         dbc.FormGroup(
             [
-                dbc.Label("Numeric feature filling aggregation function"),
+                dbc.Label("Numeric feature filling aggregation function:"),
                 dcc.Dropdown(
                     id="numfiller-func",
                     options=[
@@ -59,7 +59,7 @@ controls = dbc.Card(
         ),
         dbc.FormGroup(
             [
-                dbc.Label("Categorical feature encoding method threshold"),
+                dbc.Label("Categorical feature encoding method threshold:"),
                 dbc.Input(id="method-switch", type="number", value=10),
             ]
         ),
