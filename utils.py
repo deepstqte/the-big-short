@@ -1,4 +1,5 @@
 from sklearn.preprocessing import LabelEncoder
+import pandas as pd
 
 def na_catfiller(df):
     """
@@ -80,10 +81,19 @@ def str_catencoder(df, method_switch=10):
             return_df[column] = le.fit_transform(return_df[column])
     return return_df
 
-def merge_with_aggr(main_df, aggr_df, fk_column, aggr_dict, column_prefix):
-    agg_df = aggr_df.groupby(fk_column).agg(aggr_dict)
-    agg_df.columns = ['{}_{}_{}'.format(column_prefix,x[0],x[1]) for x in agg_df.columns.tolist()]
-    return main_df.merge(agg_df,on=fk_column,how='left')
+def merge_with_aggr(main_df, secondary_df, fk_column, aggr_dict, column_prefix):
+    secondary_df = secondary_df.groupby(fk_column).agg(aggr_dict)
+    columns_list = []
+    aggr_df = pd.DataFrame()
+    for x in secondary_df.columns.tolist():
+        if x[1] == "<lambda>" and secondary_df[x[0]][x[1]].dtypes == "object" and len(secondary_df[x[0]][x[1]].iloc[0]) > 1:
+            column_name = '{}_{}_{}'.format(column_prefix,x[0],secondary_df[x[0]][x[1]].iloc[0][1])
+            aggr_df[column_name] = secondary_df[x[0]][x[1]].apply(lambda x: x[0])
+        else:
+            column_name = '{}_{}_{}'.format(column_prefix,x[0],x[1])
+            aggr_df[column_name] = secondary_df[x[0]][x[1]]
+    aggr_df = aggr_df.rename_axis(secondary_df.index.name)
+    return main_df.merge(aggr_df,on=fk_column,how='left')
 
 ### OPTIMIZING DATA TYPES ###
 
