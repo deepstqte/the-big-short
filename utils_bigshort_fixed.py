@@ -80,6 +80,11 @@ def str_catencoder(df, method_switch=10):
             return_df[column] = le.fit_transform(return_df[column])
     return return_df
 
+def merge_with_aggr(main_df, aggr_df, fk_column, aggr_dict, column_prefix):
+    agg_df = aggr_df.groupby(fk_column).agg(aggr_dict)
+    agg_df.columns = ['{}_{}_{}'.format(column_prefix,x[0],x[1]) for x in agg_df.columns.tolist()]
+    return main_df.merge(agg_df,on=fk_column,how='left')
+
 ### OPTIMIZING DATA TYPES ###
 
 # Create function to optimize integer data types
