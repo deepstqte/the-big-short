@@ -22,12 +22,19 @@ data_dir = "data/"
 dataset_names = [re.sub('\.csv$', '', ntpath.basename(p)) for p in glob.glob(data_dir + "*.csv")]
 
 dfs = {}
-# for df_name in dataset_names:
-#     dfs[df_name] = pd.read_csv(f"{data_dir}{df_name}.csv")
+for df_name in dataset_names:
+    dfs[df_name] = pd.read_csv(f"{data_dir}{df_name}.csv")
 
 app = dash.Dash(external_stylesheets=[dbc.themes.BOOTSTRAP])
 
 server = app.server
+
+aggr_dicts = {
+    "installments_payments" : {
+        'AMT_INSTALMENT':['mean','max','min','median','sum'],
+        'AMT_PAYMENT':['mean','max','min','std'],
+    }
+}
 
 controls = dbc.Card(
     [
@@ -96,6 +103,8 @@ def make_graph(n_clicks, datasets, numfiller_func, method_switch):
         process = psutil.Process(os.getpid())
         memory_usage = size(process.memory_info().rss)
         datasets_str = ", ".join(datasets)
+        for table in ["installments_payments"]:
+            main_df = merge_with_aggr(dfs["application_train"], dfs[table], "SK_ID_CURR", aggr_dicts[table], table)
         output = html.Ul(children=[
             html.Li(f"Memory Usage: {memory_usage}"),
             html.Li(f"The selected datasets: {datasets_str}"),
