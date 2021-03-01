@@ -1,4 +1,5 @@
 from sklearn.preprocessing import LabelEncoder
+import pandas as pd
 
 def na_catfiller(df):
     """
@@ -80,20 +81,33 @@ def str_catencoder(df, method_switch=10):
             return_df[column] = le.fit_transform(return_df[column])
     return return_df
 
-### OPTIMIZING DATA TYPES ###
+def merge_with_aggr(main_df, secondary_df, fk_column, aggr_dict, column_prefix):
+    secondary_df = secondary_df.groupby(fk_column).agg(aggr_dict)
+    columns_list = []
+    aggr_df = pd.DataFrame()
+    for x in secondary_df.columns.tolist():
+        if x[1] == "<lambda>" and secondary_df[x[0]][x[1]].dtypes == "object" and len(secondary_df[x[0]][x[1]].iloc[0]) > 1:
+            column_name = '{}_{}_{}'.format(column_prefix,x[0],secondary_df[x[0]][x[1]].iloc[0][1])
+            aggr_df[column_name] = secondary_df[x[0]][x[1]].apply(lambda x: x[0])
+        else:
+            column_name = '{}_{}_{}'.format(column_prefix,x[0],x[1])
+            aggr_df[column_name] = secondary_df[x[0]][x[1]]
+    aggr_df = aggr_df.rename_axis(secondary_df.index.name)
+    return main_df.merge(aggr_df,on=fk_column,how='left')
 
-# Construct dataframe for reference used below in the optimize_inttypes function.
-np_types = [np.int8 ,np.int16 ,np.int32, np.int64,
-           np.uint8 ,np.uint16, np.uint32, np.uint64]
-np_types = [np_type.__name__ for np_type in np_types]
-type_df = pd.DataFrame(data=np_types, columns=['class_type'])
-type_df['min_value'] = type_df['class_type'].apply(lambda row: np.iinfo(row).min)
-type_df['max_value'] = type_df['class_type'].apply(lambda row: np.iinfo(row).max)
-type_df['range'] = type_df['max_value'] - type_df['min_value']
-type_df.sort_values(by='range', inplace=True)
+### OPTIMIZING DATA TYPES ###
 
 # Create function to optimize integer data types
 def optimize_inttypes(dataframe, specify="auto"):
+    # Construct dataframe for reference used below in the optimize_inttypes function.
+    np_types = [np.int8 ,np.int16 ,np.int32, np.int64,
+               np.uint8 ,np.uint16, np.uint32, np.uint64]
+    np_types = [np_type.__name__ for np_type in np_types]
+    type_df = pd.DataFrame(data=np_types, columns=['class_type'])
+    type_df['min_value'] = type_df['class_type'].apply(lambda row: np.iinfo(row).min)
+    type_df['max_value'] = type_df['class_type'].apply(lambda row: np.iinfo(row).max)
+    type_df['range'] = type_df['max_value'] - type_df['min_value']
+    type_df.sort_values(by='range', inplace=True)
     # Print initial memory usage details
     mem_sum = 0
     print('Memory usage of dataframe is {:.6f} GB'.format(dataframe.memory_usage().sum()/1000000000))
@@ -108,7 +122,7 @@ def optimize_inttypes(dataframe, specify="auto"):
             print("Col name : {} Col min_value : {} Col max_value : {} Optimized Class : {}".format(col, col_min, col_max, optimized_class))
             dataframe[col] = dataframe[col].astype(optimized_class)
     elif specify=="int32":
-        for col in dataframe.loc[:, dataframe.dtypes == np.float64]:
+        for col in dataframe.loc[:, dataframe.dtypes == np.int64]:
             dataframe[col] = dataframe[col].astype(np.int32)
         # Print updated memory usage details
         mem_sum = 0
@@ -122,18 +136,18 @@ def optimize_inttypes(dataframe, specify="auto"):
 ####################################################################################################
 ####################################################################################################
 
-# Create dataframe for reference, used in the float optimization function further below.
-np_types = [np.float16 ,np.float32, np.float64]
-np_types = [np_type.__name__ for np_type in np_types]
-floattype_df = pd.DataFrame(data=np_types, columns=['class_type'])
-floattype_df['min_value'] = floattype_df['class_type'].apply(lambda row: np.finfo(row).min)
-floattype_df['max_value'] = floattype_df['class_type'].apply(lambda row: np.finfo(row).max)
-floattype_df['range'] = floattype_df['max_value'] - floattype_df['min_value']
-floattype_df.sort_values(by='range', inplace=True)
+
 
 # Create float optimization function.
 def optimize_floattypes(dataframe, specify="auto"):
-    # Print initial memory usage details
+    # Create dataframe for reference, used in the float optimization function further below.
+    np_types = [np.float16 ,np.float32, np.float64]
+    np_types = [np_type.__name__ for np_type in np_types]
+    floattype_df = pd.DataFrame(data=np_types, columns=['class_type'])
+    floattype_df['min_value'] = floattype_df['class_type'].apply(lambda row: np.finfo(row).min)
+    floattype_df['max_value'] = floattype_df['class_type'].apply(lambda row: np.finfo(row).max)
+    floattype_df['range'] = floattype_df['max_value'] - floattype_df['min_value']
+    floattype_df.sort_values(by='range', inplace=True)# Print initial memory usage details
     mem_sum = 0
     print('Memory usage of dataframe is {:.6f} GB'.format(i.memory_usage().sum()/1000000000))
     mem_sum = mem_sum+i.memory_usage().sum()/1000000000
