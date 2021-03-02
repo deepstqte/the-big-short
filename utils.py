@@ -150,8 +150,8 @@ def optimize_floattypes(dataframe, specify="auto"):
     floattype_df['range'] = floattype_df['max_value'] - floattype_df['min_value']
     floattype_df.sort_values(by='range', inplace=True)# Print initial memory usage details
     mem_sum = 0
-    print('Memory usage of dataframe is {:.6f} GB'.format(i.memory_usage().sum()/1000000000))
-    mem_sum = mem_sum+i.memory_usage().sum()/1000000000
+    print('Memory usage of dataframe is {:.6f} GB'.format(dataframe.memory_usage().sum()/1000000000))
+    mem_sum = mem_sum+dataframe.memory_usage().sum()/1000000000
     print(f"Total initial memory used for selected dataframe is: {mem_sum:.2f}GB")
     if specify == "auto":
         for col in dataframe.loc[:, dataframe.dtypes == np.float64]:
