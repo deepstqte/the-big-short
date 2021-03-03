@@ -75,7 +75,7 @@ def str_catencoder(df, method_switch=10):
     return_df = df
     for column in str_columns:
         if df[column].nunique() <= method_switch:
-            df_dummies = pd.get_dummies(df["application_train"][column],prefix=column)
+            df_dummies = pd.get_dummies(df[column],prefix=column)
             return_df = pd.concat([return_df, df_dummies], axis=1)
             return_df.drop(column, axis=1, inplace=True)
         else:
