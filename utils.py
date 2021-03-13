@@ -54,7 +54,7 @@ def na_numfiller(df, aggregation_func="mean"):
         df.fillna(df[null_cols].median(), inplace=True)
     else:
         return False
-    return
+    return df
 
 def str_catencoder(df, method_switch=10):
     """
@@ -75,7 +75,7 @@ def str_catencoder(df, method_switch=10):
     return_df = df
     for column in str_columns:
         if df[column].nunique() <= method_switch:
-            df_dummies = pd.get_dummies(df["application_train"][column],prefix=column)
+            df_dummies = pd.get_dummies(df[column],prefix=column)
             return_df = pd.concat([return_df, df_dummies], axis=1)
             return_df.drop(column, axis=1, inplace=True)
         else:
@@ -84,6 +84,8 @@ def str_catencoder(df, method_switch=10):
     return return_df
 
 def merge_with_aggr(main_df, secondary_df, fk_column, aggr_dict, column_prefix):
+    if not aggr_dict:
+        return main_df
     secondary_df = secondary_df.groupby(fk_column).agg(aggr_dict)
     columns_list = []
     aggr_df = pd.DataFrame()
