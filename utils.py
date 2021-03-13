@@ -81,6 +81,7 @@ def str_catencoder(df, method_switch=10):
         else:
             return_df[column] = return_df[column].map(str)
             return_df[column] = le.fit_transform(return_df[column])
+    return_df = return_df.rename(columns = lambda x:re.sub('[^A-Za-z0-9_]+', '', x))
     return return_df
 
 def merge_with_aggr(main_df, secondary_df, fk_column, aggr_dict, column_prefix):
