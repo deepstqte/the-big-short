@@ -91,7 +91,7 @@ def merge_with_aggr(main_df, secondary_df, fk_column, aggr_dict, column_prefix):
     columns_list = []
     aggr_df = pd.DataFrame()
     for x in secondary_df.columns.tolist():
-        if x[1] == "<lambda>" and secondary_df[x[0]][x[1]].dtypes == "object" and len(secondary_df[x[0]][x[1]].iloc[0]) > 1:
+        if x[1].startswith("<lambda") and secondary_df[x[0]][x[1]].dtypes == "object" and len(secondary_df[x[0]][x[1]].iloc[0]) > 1:
             column_name = '{}_{}_{}'.format(column_prefix,x[0],secondary_df[x[0]][x[1]].iloc[0][1])
             aggr_df[column_name] = secondary_df[x[0]][x[1]].apply(lambda x: x[0])
         else:
