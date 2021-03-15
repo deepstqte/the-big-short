@@ -134,11 +134,6 @@ app.layout = dbc.Container(
     fluid=True,
 )
 
-# if k in list(custom_merge_aggr_funcs.keys()):
-#     non_empty[row["Feature"]].append((custom_merge_aggr_funcs[k], k))
-# else:
-#     non_empty[row["Feature"]].append(k)
-
 @app.callback(
     [Output(f"{dataset}_aggr_dicts", "data") for dataset in secondary_dataset_names] +
     [Output(f"{dataset}_table", "data") for dataset in secondary_dataset_names] +
@@ -186,10 +181,11 @@ def produce_main_df(*args):
         memory_usage = size(process.memory_info().rss)
         main_df = dfs["application_train"]
         for table in secondary_dataset_names:
-            for feature, func_list in aggr_dicts[secondary_dataset_names.index(table)].items():
-                for func in func_list:
-                    if func in custom_merge_aggr_funcs:
-                        aggr_dicts[secondary_dataset_names.index(table)][feature][func_list.index(func)] = custom_merge_aggr_funcs[func]
+            if aggr_dicts[secondary_dataset_names.index(table)]:
+                for feature, func_list in aggr_dicts[secondary_dataset_names.index(table)].items():
+                    for func in func_list:
+                        if func in custom_merge_aggr_funcs:
+                            aggr_dicts[secondary_dataset_names.index(table)][feature][func_list.index(func)] = custom_merge_aggr_funcs[func]
             main_df = merge_with_aggr(main_df, dfs[table], "SK_ID_CURR", aggr_dicts[secondary_dataset_names.index(table)], table)
         main_df = str_catencoder(main_df, method_switch)
         main_df = na_numfiller(main_df, numfiller_func)
