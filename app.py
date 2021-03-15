@@ -124,6 +124,7 @@ app.layout = dbc.Container(
                     html.H2("More pre-processing"),
                     columns_card,
                     html.Div(id="results-display"),
+                    html.Pre(id="main-df-head-value"),
                 ], md=12),
                 
             ],
@@ -160,6 +161,16 @@ def save_load_merge_tables(*args):
     return args_list + [json.dumps(aggr_dict_value, indent=2)]
 
 @app.callback(
+    [Output("main-df-head-value", "children")],
+    [Input("main_df", "data")],
+)
+def show_main_df(main_df_dict):
+    main_df_head = []
+    if main_df_dict:
+        main_df_head = main_df_dict[:5]
+    return [json.dumps(main_df_head, indent=2)]
+
+@app.callback(
     Output("main_df", "data"),
     Input("go-for-it", "n_clicks"),
     [State("numfiller-func", "value"), State("method-switch", "value")] +
@@ -188,6 +199,8 @@ def produce_main_df(*args):
             html.Li(f"The aggregation function used to fill numeric empty values: {numfiller_func}"),
             html.Li(f"The threshold of number of unique values used to decide whether to use One-Hot or Label encoding: {method_switch}"),
         ])
+        print(main_df.head())
+        # return output
         return main_df.to_dict('records')
 
 
