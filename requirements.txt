@@ -5,3 +5,4 @@ sklearn
 hurry.filesize==0.9
 psutil==5.7.2
 lightgbm==3.1.1
+dict_hash==1.1.16
