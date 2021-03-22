@@ -167,29 +167,34 @@ results_card = dbc.Card(
     body=True,
 )
 
-app.layout = dbc.Container(
-    [dcc.Store(id=f"{dataset}_aggr_dicts", storage_type='local') for dataset in secondary_dataset_names] +
-    [dcc.Store(id="main_df_params_hash", storage_type='local')] +
-    [
-        html.H1("The Big Short: Credit Risk Analysis"),
-        html.Hr(),
-        dbc.Row(
-            [
-                dbc.Col([
-                    html.H2("Feature engineering and model tuning"),
-                    merge_card,
-                    html.H2("Results"),
-                    results_card,
-                    html.Div(id="results-display"),
-                    html.Div(id="hidden-div", style={"display":"none"}),
-                    html.Div(id="hidden-div-2", style={"display":"none"})
-                ], md=12),
-                
-            ],
-            align="center",
-        ),
-    ],
-    fluid=True,
+app.layout = dcc.Loading(
+    id="loading-1",
+    fullscreen=True,
+    type="cube",
+    children=dbc.Container(
+        [dcc.Store(id=f"{dataset}_aggr_dicts", storage_type='local') for dataset in secondary_dataset_names] +
+        [dcc.Store(id="main_df_params_hash", storage_type='local')] +
+        [
+            html.H1("The Big Short: Credit Risk Analysis"),
+            html.Hr(),
+            dbc.Row(
+                [
+                    dbc.Col([
+                        html.H2("Feature engineering and model tuning"),
+                        merge_card,
+                        html.H2("Results"),
+                        results_card,
+                        html.Div(id="results-display"),
+                        html.Div(id="hidden-div", style={"display":"none"}),
+                        html.Div(id="hidden-div-2", style={"display":"none"})
+                    ], md=12),
+                    
+                ],
+                align="center",
+            ),
+        ],
+        fluid=True,
+    )
 )
 
 @app.callback(
