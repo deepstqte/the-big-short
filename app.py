@@ -141,7 +141,7 @@ merge_card = dbc.Card(
                 dbc.FormGroup(
                     [
                         dbc.Label("Number of parallel threads:"),
-                        dbc.Input(id="num-threads", type="number", value=2),
+                        dbc.Input(id="num-threads", type="number", value=6),
                     ]
                 ),
                 dbc.Button("Train The Model.", id="train-model", size="lg", outline=True, color="primary"),
