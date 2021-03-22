@@ -4,15 +4,20 @@ import dash_core_components as dcc
 import dash_html_components as html
 import dash_table
 from dash.dependencies import Input, Output, State
+import lightgbm as lgb
+from sklearn.model_selection import train_test_split
 
 import pandas as pd
 import plotly.graph_objs as go
+from dict_hash import sha256
 
 import glob
+import sys
 import ntpath
 import pickle
 import re
 import os, psutil
+from os import path
 import json
 from hurry.filesize import size
 
@@ -66,6 +71,34 @@ def datatable_to_aggr_dict(table=[]):
                 non_empty[row["Feature"]].append(k)
     return {k: v for k, v in non_empty.items() if v}
 
+
+def train_model(df, target_feat="TARGET", exclude_feats=["SK_ID_CURR"], n_estimators=100000, boost_from_average='false', learning_rate=0.01, num_leaves=64, num_threads=2, max_depth=-1, tree_learner="serial", feature_fraction=0.7, bagging_freq=5, bagging_fraction=0.7, min_data_in_leaf=100, max_bin=255, bagging_seed=11, early_stopping_rounds=300, test_size=0.1):
+    model_lgb = lgb.LGBMClassifier(
+        n_estimators=n_estimators,
+        boost_from_average=boost_from_average,
+        learning_rate=learning_rate,
+        num_leaves=num_leaves,
+        num_threads=num_threads,
+        max_depth=max_depth,
+        tree_learner=tree_learner,
+        feature_fraction=feature_fraction,
+        bagging_freq=bagging_freq,
+        bagging_fraction=bagging_fraction,
+        min_data_in_leaf=min_data_in_leaf,
+        silent=-1,
+        verbose=-1,
+        max_bin=max_bin,
+        bagging_seed=bagging_seed,
+    )
+    features = [f for f in df.columns if f not in exclude_feats + [target_feat]]
+    X = df[features]
+    y = df[target_feat]
+
+    X_train, X_valid, y_train, y_valid = train_test_split(X, y, shuffle=True, random_state=10, test_size=test_size)
+    model_lgb.fit(X_train, y_train, eval_set=[(X_train, y_train), (X_valid, y_valid)], eval_metric='auc', verbose=200,
+              early_stopping_rounds=early_stopping_rounds)
+    return model_lgb
+
 dash_datatable_tabs = {}
 for dataset in secondary_dataset_names:
     dash_datatable_tabs[dataset] = dash_table.DataTable(
@@ -79,52 +112,77 @@ merge_card = dbc.Card(
     [
         dbc.Row([
             dbc.Col(tabs, md=8),
-            dbc.Col(html.Pre(id="aggr-dicts-value"), md=4),
+            dbc.Col(children=[
+                dbc.FormGroup(
+                    [
+                        dbc.Label("Numeric feature filling aggregation function:"),
+                        dcc.Dropdown(
+                            id="numfiller-func",
+                            options=[
+                                {"label": col, "value": col} for col in ["mean", "median"]
+                            ],
+                            value="mean",
+                        ),
+                    ]
+                ),
+                dbc.FormGroup(
+                    [
+                        dbc.Label("Categorical feature encoding method threshold:"),
+                        dbc.Input(id="method-switch", type="number", value=10),
+                    ]
+                ),
+                dbc.Button("Produce Main Dataframe.", id="produce-main-df", size="lg", outline=True, color="primary"),
+                dbc.FormGroup(
+                    [
+                        dbc.Label("Early Stopping Rounds:"),
+                        dbc.Input(id="early-stopping-rounds", type="number", value=300),
+                    ]
+                ),
+                dbc.FormGroup(
+                    [
+                        dbc.Label("Number of parallel threads:"),
+                        dbc.Input(id="num-threads", type="number", value=2),
+                    ]
+                ),
+                dbc.Button("Train The Model.", id="train-model", size="lg", outline=True, color="primary"),
+            ], md=4),
         ])
     ],
     body=True,
 )
 
-columns_card = dbc.Card(
+results_card = dbc.Card(
     [
-        dbc.FormGroup(
-            [
-                dbc.Label("Numeric feature filling aggregation function:"),
-                dcc.Dropdown(
-                    id="numfiller-func",
-                    options=[
-                        {"label": col, "value": col} for col in ["mean", "median"]
-                    ],
-                    value="mean",
-                ),
-            ]
-        ),
-        dbc.FormGroup(
-            [
-                dbc.Label("Categorical feature encoding method threshold:"),
-                dbc.Input(id="method-switch", type="number", value=10),
-            ]
-        ),
-        dbc.Button("Go.", id="go-for-it", size="lg", outline=True, color="primary"),
+        dbc.Row([
+
+            dbc.Col([dbc.Label("Aggregation functions dict:"),html.Pre(id="aggr-dicts-value")], md=4),
+            dbc.Col([dbc.Label("Model training logs:"),html.Div(id="logs-text-1"),html.Div(id="logs-text-2")], md=8),
+            dcc.Interval(
+                id='logs-interval',
+                interval=1*1000, # in milliseconds
+                n_intervals=0
+            )
+        ])
     ],
     body=True,
 )
 
 app.layout = dbc.Container(
     [dcc.Store(id=f"{dataset}_aggr_dicts", storage_type='local') for dataset in secondary_dataset_names] +
-    [dcc.Store(id="main_df", storage_type='memory')] +
+    [dcc.Store(id="main_df_params_hash", storage_type='local')] +
     [
         html.H1("The Big Short: Credit Risk Analysis"),
         html.Hr(),
         dbc.Row(
             [
                 dbc.Col([
-                    html.H2("Merges"),
+                    html.H2("Feature engineering and model tuning"),
                     merge_card,
-                    html.H2("More pre-processing"),
-                    columns_card,
+                    html.H2("Results"),
+                    results_card,
                     html.Div(id="results-display"),
-                    html.Pre(id="main-df-head-value"),
+                    html.Div(id="hidden-div", style={"display":"none"}),
+                    html.Div(id="hidden-div-2", style={"display":"none"})
                 ], md=12),
                 
             ],
@@ -137,7 +195,7 @@ app.layout = dbc.Container(
 @app.callback(
     [Output(f"{dataset}_aggr_dicts", "data") for dataset in secondary_dataset_names] +
     [Output(f"{dataset}_table", "data") for dataset in secondary_dataset_names] +
-    [Output("aggr-dicts-value", "children")],
+    [Output("aggr-dicts-value", "children"), Output("main_df_params_hash", "data")],
     [Input(f"{dataset}_aggr_dicts", "data") for dataset in secondary_dataset_names] +
     [Input(f"{dataset}_table", "data") for dataset in secondary_dataset_names],
 )
@@ -153,51 +211,93 @@ def save_load_merge_tables(*args):
         elif "_table" in trigger_id:
             args_list[ouput_indexes.index(trigger_id) - len(secondary_dataset_names)] = datatable_to_aggr_dict(args[ouput_indexes.index(trigger_id)])
         aggr_dict_value = {dataset: args_list[secondary_dataset_names.index(dataset)] for dataset in secondary_dataset_names}
-    return args_list + [json.dumps(aggr_dict_value, indent=2)]
+    return args_list + [json.dumps(aggr_dict_value, indent=2), sha256(aggr_dict_value)]
 
 @app.callback(
-    [Output("main-df-head-value", "children")],
-    [Input("main_df", "data")],
+    Output("logs-text-1", "children"),
+    Input("train-model", "n_clicks"),
+    [
+        State("early-stopping-rounds", "value"),
+        State("num-threads", "value"),
+        State("numfiller-func", "value"),
+        State("method-switch", "value")
+    ] +
+    [State(f"{dataset}_aggr_dicts", "data") for dataset in secondary_dataset_names],
 )
-def show_main_df(main_df_dict):
-    main_df_head = []
-    if main_df_dict:
-        main_df_head = main_df_dict[:5]
-    return [json.dumps(main_df_head, indent=2)]
+def train_model_callback(*args):
+    main_df_hash = sha256({k: v for k, v in enumerate(list(args)[3:])})
+    n_clicks = args[0]
+    early_stopping_rounds = args[1]
+    num_threads = args[2]
+    if n_clicks:
+        if path.isfile(f"data/cache/{main_df_hash}.csv"):
+            with open('data/logs.txt', 'w') as f:
+                sys.stdout = f
+                print("Main DF exists.")
+            main_df = pd.read_csv(f"data/cache/{main_df_hash}.csv")
+            with open('data/logs.txt', 'w') as f:
+                sys.stdout = f
+                print("Model training...")
+            with open('data/logs.txt', 'w') as f:
+                sys.stdout = f
+                model = train_model(main_df, early_stopping_rounds=early_stopping_rounds, num_threads=num_threads)
+        else:
+            with open('data/logs.txt', 'w') as f:
+                sys.stdout = f
+                print("Main DF does not exist, produce it first.")
+            return dash.no_update
+        # process = psutil.Process(os.getpid())
+        # memory_usage = size(process.memory_info().rss)
+        logs_file = open('data/logs.txt', 'r')
+        logs_lines = logs_file.readlines()
+        output = [html.Div(line) for line in logs_lines]
+        return output
 
 @app.callback(
-    Output("main_df", "data"),
-    Input("go-for-it", "n_clicks"),
+    Output("logs-text-2", "children"),
+    Input("produce-main-df", "n_clicks"),
     [State("numfiller-func", "value"), State("method-switch", "value")] +
     [State(f"{dataset}_aggr_dicts", "data") for dataset in secondary_dataset_names],
 )
 def produce_main_df(*args):
-    n_clicks = args[0]
-    numfiller_func = args[1]
-    method_switch = args[2]
-    aggr_dicts = list(args)[3:]
-    if n_clicks:
-        process = psutil.Process(os.getpid())
-        memory_usage = size(process.memory_info().rss)
-        main_df = dfs["application_train"]
-        for table in secondary_dataset_names:
-            if aggr_dicts[secondary_dataset_names.index(table)]:
-                for feature, func_list in aggr_dicts[secondary_dataset_names.index(table)].items():
-                    for func in func_list:
-                        if func in custom_merge_aggr_funcs:
-                            aggr_dicts[secondary_dataset_names.index(table)][feature][func_list.index(func)] = custom_merge_aggr_funcs[func]
-            main_df = merge_with_aggr(main_df, dfs[table], "SK_ID_CURR", aggr_dicts[secondary_dataset_names.index(table)], table)
-        main_df = str_catencoder(main_df, method_switch)
-        main_df = na_numfiller(main_df, numfiller_func)
-        main_df = na_catfiller(main_df)
-        output = html.Ul(children=[
-            html.Li(f"Memory Usage: {memory_usage}"),
-            html.Li(f"The aggregation function used to fill numeric empty values: {numfiller_func}"),
-            html.Li(f"The threshold of number of unique values used to decide whether to use One-Hot or Label encoding: {method_switch}"),
-        ])
-        print(main_df.head())
-        # return output
-        return main_df.to_dict('records')
+    with open('data/logs.txt', 'w') as f:
+        sys.stdout = f
+        main_df_hash = sha256({k: v for k, v in enumerate(list(args)[1:])})
+        n_clicks = args[0]
+        numfiller_func = args[1]
+        method_switch = args[2]
+        aggr_dicts = list(args)[3:]
+        if n_clicks:
+            if path.isfile(f"data/cache/{main_df_hash}.csv"):
+                with open('data/logs.txt', 'w') as f:
+                    sys.stdout = f
+                    print("Main DF exists already")
+                main_df = pd.read_csv(f"data/cache/{main_df_hash}.csv")
+            else:
+                with open('data/logs.txt', 'w') as f:
+                    sys.stdout = f
+                    print("Producing Main DF and saving it...")
+                main_df = dfs["application_train"]
+                for table in secondary_dataset_names:
+                    if aggr_dicts[secondary_dataset_names.index(table)]:
+                        for feature, func_list in aggr_dicts[secondary_dataset_names.index(table)].items():
+                            for func in func_list:
+                                if func in custom_merge_aggr_funcs:
+                                    aggr_dicts[secondary_dataset_names.index(table)][feature][func_list.index(func)] = custom_merge_aggr_funcs[func]
+                    main_df = merge_with_aggr(main_df, dfs[table], "SK_ID_CURR", aggr_dicts[secondary_dataset_names.index(table)], table)
+                main_df = str_catencoder(main_df, method_switch)
+                main_df = na_numfiller(main_df, numfiller_func)
+                main_df = na_catfiller(main_df)
+                main_df.to_csv(f'data/cache/{main_df_hash}.csv', index=False)
+                with open('data/logs.txt', 'w') as f:
+                    sys.stdout = f
+                    print("Main DF saved")
+            # process = psutil.Process(os.getpid())
+            # memory_usage = size(process.memory_info().rss)
+            logs_file = open('data/logs.txt', 'r')
+            logs_lines = logs_file.readlines()
+            output = [html.Div(line) for line in logs_lines]
+            return output
 
 
 if __name__ == "__main__":
