@@ -25,7 +25,6 @@ from utils import *
 
 data_dir = "data/"
 
-# The length and order here should be identical to the length and order of the show_table_data callback Inputs
 dataset_names = [re.sub('\.csv$', '', ntpath.basename(p)) for p in glob.glob(data_dir + "*.csv")]
 secondary_dataset_names = [item for item in dataset_names if item not in ["application_train"]]
 id_features = ["SK_ID_PREV", "SK_ID_CURR"]
@@ -135,13 +134,19 @@ merge_card = dbc.Card(
                 dbc.FormGroup(
                     [
                         dbc.Label("Early Stopping Rounds:"),
-                        dbc.Input(id="early-stopping-rounds", type="number", value=300),
+                        dbc.Input(id="early-stopping-rounds", type="number", value=300, min=0, max=800),
                     ]
                 ),
                 dbc.FormGroup(
                     [
                         dbc.Label("Number of parallel threads:"),
-                        dbc.Input(id="num-threads", type="number", value=6),
+                        dbc.Input(id="num-threads", type="number", value=6, min=1, max=8),
+                    ]
+                ),
+                dbc.FormGroup(
+                    [
+                        dbc.Label("Test size:"),
+                        dbc.Input(id="test-size", type="number", value=0.1, min=0.1, max=0.9, step=0.1),
                     ]
                 ),
                 dbc.Button("Train The Model.", id="train-model", size="lg", outline=True, color="primary"),
@@ -237,23 +242,30 @@ def save_load_merge_tables(*args):
     [
         State("early-stopping-rounds", "value"),
         State("num-threads", "value"),
+        State("test-size", "value"),
         State("numfiller-func", "value"),
         State("method-switch", "value")
     ] +
     [State(f"{dataset}_aggr_dicts", "data") for dataset in secondary_dataset_names],
 )
 def train_model_callback(*args):
-    main_df_hash = sha256({k: v for k, v in enumerate(list(args)[3:])})
+    main_df_hash = sha256({k: v for k, v in enumerate(list(args)[4:])})
     n_clicks = args[0]
     early_stopping_rounds = args[1]
     num_threads = args[2]
+    test_size = args[3]
     logs_output = ""
     if n_clicks:
         if path.isfile(f"data/cache/{main_df_hash}.csv"):
             main_df = pd.read_csv(f"data/cache/{main_df_hash}.csv")
             with open('data/logs.txt', 'w') as f:
                 sys.stdout = f
-                model = train_model(main_df, early_stopping_rounds=early_stopping_rounds, num_threads=num_threads)
+                model = train_model(
+                    main_df,
+                    early_stopping_rounds=early_stopping_rounds,
+                    num_threads=num_threads,
+                    test_size=test_size
+                )
         else:
             return dash.no_update, True, "Main Dataframe does not exist, produce it first.", "danger"
         logs_file = open('data/logs.txt', 'r')
