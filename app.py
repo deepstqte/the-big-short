@@ -156,12 +156,20 @@ results_card = dbc.Card(
         dbc.Row([
 
             dbc.Col([dbc.Label("Aggregation functions dict:"),html.Pre(id="aggr-dicts-value")], md=4),
-            dbc.Col([dbc.Label("Model training logs:"),html.Div(id="logs-text-1"),html.Div(id="logs-text-2")], md=8),
-            dcc.Interval(
-                id='logs-interval',
-                interval=1*1000, # in milliseconds
-                n_intervals=0
-            )
+            dbc.Col([
+                dbc.Alert(
+                    id="main-df-alert",
+                    dismissable=True,
+                    is_open=False,
+                ),
+                dbc.Alert(
+                    id="model-training-alert",
+                    dismissable=True,
+                    is_open=False,
+                ),
+                dbc.Label("Model training logs:"),
+                html.Div(id="logs-text")
+            ], md=8),
         ])
     ],
     body=True,
@@ -170,7 +178,7 @@ results_card = dbc.Card(
 app.layout = dcc.Loading(
     id="loading-1",
     fullscreen=True,
-    type="cube",
+    type="default",
     children=dbc.Container(
         [dcc.Store(id=f"{dataset}_aggr_dicts", storage_type='local') for dataset in secondary_dataset_names] +
         [dcc.Store(id="main_df_params_hash", storage_type='local')] +
@@ -219,7 +227,12 @@ def save_load_merge_tables(*args):
     return args_list + [json.dumps(aggr_dict_value, indent=2), sha256(aggr_dict_value)]
 
 @app.callback(
-    Output("logs-text-1", "children"),
+    [
+        Output("logs-text", "children"),
+        Output("model-training-alert", "is_open"),
+        Output("model-training-alert", "children"),
+        Output("model-training-alert", "color"),
+    ],
     Input("train-model", "n_clicks"),
     [
         State("early-stopping-rounds", "value"),
@@ -234,75 +247,59 @@ def train_model_callback(*args):
     n_clicks = args[0]
     early_stopping_rounds = args[1]
     num_threads = args[2]
+    logs_output = ""
     if n_clicks:
         if path.isfile(f"data/cache/{main_df_hash}.csv"):
-            with open('data/logs.txt', 'w') as f:
-                sys.stdout = f
-                print("Main DF exists.")
             main_df = pd.read_csv(f"data/cache/{main_df_hash}.csv")
-            with open('data/logs.txt', 'w') as f:
-                sys.stdout = f
-                print("Model training...")
             with open('data/logs.txt', 'w') as f:
                 sys.stdout = f
                 model = train_model(main_df, early_stopping_rounds=early_stopping_rounds, num_threads=num_threads)
         else:
-            with open('data/logs.txt', 'w') as f:
-                sys.stdout = f
-                print("Main DF does not exist, produce it first.")
-            return dash.no_update
-        # process = psutil.Process(os.getpid())
-        # memory_usage = size(process.memory_info().rss)
+            return dash.no_update, True, "Main Dataframe does not exist, produce it first.", "danger"
         logs_file = open('data/logs.txt', 'r')
         logs_lines = logs_file.readlines()
-        output = [html.Div(line) for line in logs_lines]
-        return output
+        logs_output = [html.Div(line) for line in logs_lines]
+    return logs_output, False, "", "info"
 
 @app.callback(
-    Output("logs-text-2", "children"),
+    [
+        Output("main-df-alert", "is_open"),
+        Output("main-df-alert", "children"),
+        Output("main-df-alert", "color"),
+    ],
     Input("produce-main-df", "n_clicks"),
     [State("numfiller-func", "value"), State("method-switch", "value")] +
     [State(f"{dataset}_aggr_dicts", "data") for dataset in secondary_dataset_names],
 )
 def produce_main_df(*args):
-    with open('data/logs.txt', 'w') as f:
-        sys.stdout = f
-        main_df_hash = sha256({k: v for k, v in enumerate(list(args)[1:])})
-        n_clicks = args[0]
-        numfiller_func = args[1]
-        method_switch = args[2]
-        aggr_dicts = list(args)[3:]
-        if n_clicks:
-            if path.isfile(f"data/cache/{main_df_hash}.csv"):
-                with open('data/logs.txt', 'w') as f:
-                    sys.stdout = f
-                    print("Main DF exists already")
-                main_df = pd.read_csv(f"data/cache/{main_df_hash}.csv")
-            else:
-                with open('data/logs.txt', 'w') as f:
-                    sys.stdout = f
-                    print("Producing Main DF and saving it...")
-                main_df = dfs["application_train"]
-                for table in secondary_dataset_names:
-                    if aggr_dicts[secondary_dataset_names.index(table)]:
-                        for feature, func_list in aggr_dicts[secondary_dataset_names.index(table)].items():
-                            for func in func_list:
-                                if func in custom_merge_aggr_funcs:
-                                    aggr_dicts[secondary_dataset_names.index(table)][feature][func_list.index(func)] = custom_merge_aggr_funcs[func]
-                    main_df = merge_with_aggr(main_df, dfs[table], "SK_ID_CURR", aggr_dicts[secondary_dataset_names.index(table)], table)
-                main_df = str_catencoder(main_df, method_switch)
-                main_df = na_numfiller(main_df, numfiller_func)
-                main_df = na_catfiller(main_df)
-                main_df.to_csv(f'data/cache/{main_df_hash}.csv', index=False)
-                with open('data/logs.txt', 'w') as f:
-                    sys.stdout = f
-                    print("Main DF saved")
-            # process = psutil.Process(os.getpid())
-            # memory_usage = size(process.memory_info().rss)
-            logs_file = open('data/logs.txt', 'r')
-            logs_lines = logs_file.readlines()
-            output = [html.Div(line) for line in logs_lines]
-            return output
+    main_df_hash = sha256({k: v for k, v in enumerate(list(args)[1:])})
+    n_clicks = args[0]
+    numfiller_func = args[1]
+    method_switch = args[2]
+    aggr_dicts = list(args)[3:]
+    color = "info"
+    if n_clicks:
+        message = ""
+        if path.isfile(f"data/cache/{main_df_hash}.csv"):
+            message = "Main Dataframe exists already"
+        else:
+            main_df = dfs["application_train"]
+            for table in secondary_dataset_names:
+                if aggr_dicts[secondary_dataset_names.index(table)]:
+                    for feature, func_list in aggr_dicts[secondary_dataset_names.index(table)].items():
+                        for func in func_list:
+                            if func in custom_merge_aggr_funcs:
+                                aggr_dicts[secondary_dataset_names.index(table)][feature][func_list.index(func)] = custom_merge_aggr_funcs[func]
+                main_df = merge_with_aggr(main_df, dfs[table], "SK_ID_CURR", aggr_dicts[secondary_dataset_names.index(table)], table)
+            main_df = str_catencoder(main_df, method_switch)
+            main_df = na_numfiller(main_df, numfiller_func)
+            main_df = na_catfiller(main_df)
+            main_df.to_csv(f'data/cache/{main_df_hash}.csv', index=False)
+            message = "Main Dataframe saved"
+            color = "success"
+        return True, message, color
+    else:
+        return False, "", color
 
 
 if __name__ == "__main__":
