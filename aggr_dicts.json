@@ -1,0 +1,275 @@
+{
+  "POS_CASH_balance": {
+    "MONTHS_BALANCE": [
+      "max",
+      "median",
+      "max_min_diff"
+    ],
+    "CNT_INSTALMENT": [
+      "max",
+      "median"
+    ],
+    "CNT_INSTALMENT_FUTURE": [
+      "max",
+      "median"
+    ]
+  },
+  "credit_card_balance": {
+    "MONTHS_BALANCE": [
+      "max",
+      "median"
+    ],
+    "AMT_BALANCE": [
+      "max",
+      "median"
+    ],
+    "AMT_CREDIT_LIMIT_ACTUAL": [
+      "max",
+      "median"
+    ],
+    "AMT_DRAWINGS_ATM_CURRENT": [
+      "max",
+      "median"
+    ],
+    "AMT_DRAWINGS_CURRENT": [
+      "max",
+      "median"
+    ],
+    "AMT_DRAWINGS_OTHER_CURRENT": [
+      "max",
+      "median"
+    ],
+    "AMT_DRAWINGS_POS_CURRENT": [
+      "max",
+      "median"
+    ],
+    "AMT_INST_MIN_REGULARITY": [
+      "max",
+      "median"
+    ],
+    "AMT_PAYMENT_CURRENT": [
+      "max",
+      "median"
+    ],
+    "AMT_PAYMENT_TOTAL_CURRENT": [
+      "max",
+      "median"
+    ],
+    "AMT_RECEIVABLE_PRINCIPAL": [
+      "max",
+      "median"
+    ],
+    "AMT_RECIVABLE": [
+      "max",
+      "median"
+    ],
+    "AMT_TOTAL_RECEIVABLE": [
+      "max",
+      "median"
+    ],
+    "CNT_DRAWINGS_ATM_CURRENT": [
+      "max",
+      "median"
+    ],
+    "CNT_DRAWINGS_CURRENT": [
+      "max",
+      "median"
+    ],
+    "CNT_DRAWINGS_OTHER_CURRENT": [
+      "max",
+      "median"
+    ],
+    "CNT_DRAWINGS_POS_CURRENT": [
+      "max",
+      "median"
+    ]
+  },
+  "installments_payments": {
+    "NUM_INSTALMENT_VERSION": [
+      "max",
+      "median"
+    ],
+    "NUM_INSTALMENT_NUMBER": [
+      "max",
+      "median"
+    ],
+    "DAYS_INSTALMENT": [
+      "max",
+      "median"
+    ],
+    "DAYS_ENTRY_PAYMENT": [
+      "max",
+      "median"
+    ],
+    "AMT_INSTALMENT": [
+      "max",
+      "median"
+    ],
+    "AMT_PAYMENT": [
+      "max",
+      "median"
+    ]
+  },
+  "previous_application": {
+    "AMT_ANNUITY": [
+      "max",
+      "median"
+    ],
+    "AMT_APPLICATION": [
+      "max",
+      "median"
+    ],
+    "AMT_CREDIT": [
+      "max",
+      "median"
+    ],
+    "AMT_DOWN_PAYMENT": [
+      "max",
+      "median"
+    ],
+    "AMT_GOODS_PRICE": [
+      "max",
+      "median"
+    ],
+    "HOUR_APPR_PROCESS_START": [
+      "max",
+      "median"
+    ],
+    "NFLAG_LAST_APPL_IN_DAY": [
+      "median"
+    ],
+    "RATE_DOWN_PAYMENT": [
+      "max",
+      "median"
+    ],
+    "RATE_INTEREST_PRIMARY": [
+      "max",
+      "median"
+    ],
+    "RATE_INTEREST_PRIVILEGED": [
+      "max",
+      "median"
+    ],
+    "DAYS_DECISION": [
+      "max",
+      "median"
+    ],
+    "SELLERPLACE_AREA": [
+      "max",
+      "median"
+    ],
+    "CNT_PAYMENT": [
+      "max",
+      "median"
+    ],
+    "DAYS_FIRST_DRAWING": [
+      "max",
+      "median"
+    ],
+    "DAYS_FIRST_DUE": [
+      "max",
+      "median"
+    ],
+    "DAYS_LAST_DUE_1ST_VERSION": [
+      "max",
+      "median"
+    ],
+    "DAYS_LAST_DUE": [
+      "max",
+      "median"
+    ],
+    "DAYS_TERMINATION": [
+      "max",
+      "median"
+    ],
+    "NFLAG_INSURED_ON_APPROVAL": [
+      "median"
+    ]
+  },
+  "bureau": {
+    "SK_ID_BUREAU": [
+      "max",
+      "median"
+    ],
+    "DAYS_CREDIT": [
+      "max",
+      "median"
+    ],
+    "CREDIT_DAY_OVERDUE": [
+      "max",
+      "median"
+    ],
+    "DAYS_CREDIT_ENDDATE": [
+      "max",
+      "median"
+    ],
+    "DAYS_ENDDATE_FACT": [
+      "max",
+      "median"
+    ],
+    "AMT_CREDIT_MAX_OVERDUE": [
+      "max",
+      "median"
+    ],
+    "CNT_CREDIT_PROLONG": [
+      "max",
+      "median"
+    ],
+    "AMT_CREDIT_SUM": [
+      "max",
+      "median"
+    ],
+    "AMT_CREDIT_SUM_DEBT": [
+      "max",
+      "median"
+    ],
+    "AMT_CREDIT_SUM_LIMIT": [
+      "max",
+      "median"
+    ],
+    "AMT_CREDIT_SUM_OVERDUE": [
+      "max",
+      "median"
+    ],
+    "DAYS_CREDIT_UPDATE": [
+      "max",
+      "median"
+    ],
+    "AMT_ANNUITY": [
+      "max",
+      "median"
+    ],
+    "STATUS_0_MONTHS_BALANCE_MAX_MIN_DIFF": [
+      "max",
+      "median"
+    ],
+    "STATUS_1_MONTHS_BALANCE_MAX_MIN_DIFF": [
+      "max",
+      "median"
+    ],
+    "STATUS_2_MONTHS_BALANCE_MAX_MIN_DIFF": [
+      "max",
+      "median"
+    ],
+    "STATUS_3_MONTHS_BALANCE_MAX_MIN_DIFF": [
+      "max",
+      "median"
+    ],
+    "STATUS_4_MONTHS_BALANCE_MAX_MIN_DIFF": [
+      "max",
+      "median"
+    ],
+    "STATUS_5_MONTHS_BALANCE_MAX_MIN_DIFF": [
+      "max",
+      "median"
+    ],
+    "STATUS_C_MONTHS_BALANCE_MAX_MIN_DIFF": [
+      "max",
+      "median"
+    ],
+    "STATUS_X_MONTHS_BALANCE_MAX_MIN_DIFF": [
+      "max",
+      "median"
+    ]
+  }
+}
