@@ -166,7 +166,7 @@ model_training_card = dbc.Card(
                 dbc.FormGroup(
                     [
                         dbc.Label("Early Stopping Rounds:"),
-                        dbc.Input(id="early-stopping-rounds", type="number", value=50, min=0, max=800),
+                        dbc.Input(id="early-stopping-rounds", type="number", value=300, min=0, max=800),
                     ]
                 ),
             ], md=3),
@@ -230,7 +230,7 @@ model_training_card = dbc.Card(
                 dbc.FormGroup(
                     [
                         dbc.Label("Minimum data in leaf:"),
-                        dbc.Input(id="min-data-in-leaf", type="number", value=100, min=100, max=10000, step=100),
+                        dbc.Input(id="min-data-in-leaf", type="number", value=600, min=100, max=10000, step=100),
                     ]
                 ),
             ], md=3),
