@@ -70,6 +70,22 @@ def str_one_hot_encoder(df, unique_threshold=10):
     return_df = return_df.rename(columns = lambda x:re.sub('[^A-Za-z0-9_]+', '', x))
     return return_df
 
+def aggr_dicts_json_to_dict(data_from_json):
+    custom_merge_aggr_funcs = {
+        "max_min_diff": lambda x: (x.max()-x.min(), "max_min_diff")
+    }
+    aggr_dicts = {}
+    for df, df_features in data_from_json.items():
+        aggr_dicts[df] = {}
+        for feature, aggr_funcs in df_features.items():
+            aggr_dicts[df][feature] = []
+            for func in aggr_funcs:
+                if func in custom_merge_aggr_funcs:
+                    aggr_dicts[df][feature].append(custom_merge_aggr_funcs[func])
+                else:
+                    aggr_dicts[df][feature].append(func)
+    return aggr_dicts
+
 def str_catencoder(df, method_switch=10):
     """
     This function applies one-hot encoding or label encoding on
