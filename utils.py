@@ -56,6 +56,20 @@ def na_numfiller(df, aggregation_func="mean"):
         return False
     return df
 
+def str_one_hot_encoder(df, unique_threshold=10):
+    str_columns = df.select_dtypes(include=['object']).columns
+    df.columns = df.columns.str.replace(' ', '_')
+    df.columns = df.columns.str.replace(',', '_')
+    df = df.rename(columns = lambda x:re.sub('[^A-Za-z0-9_]+', '', x))
+    return_df = df
+    for column in str_columns:
+        if df[column].nunique() <= unique_threshold:
+            df_dummies = pd.get_dummies(df[column],prefix=column)
+            return_df = pd.concat([return_df, df_dummies], axis=1)
+        return_df.drop(column, axis=1, inplace=True)
+    return_df = return_df.rename(columns = lambda x:re.sub('[^A-Za-z0-9_]+', '', x))
+    return return_df
+
 def str_catencoder(df, method_switch=10):
     """
     This function applies one-hot encoding or label encoding on
