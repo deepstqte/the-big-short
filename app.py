@@ -25,6 +25,8 @@ from utils import *
 
 data_dir = "data/"
 
+original_stdout = sys.stdout
+
 dataset_names = [re.sub('\.csv$', '', ntpath.basename(p)) for p in glob.glob(data_dir + "*.csv")]
 secondary_dataset_names = [item for item in dataset_names if item not in ["application_train"]]
 id_features = ["SK_ID_PREV", "SK_ID_CURR"]
@@ -37,6 +39,11 @@ custom_merge_aggr_funcs = {
 dfs = {}
 for df_name in dataset_names:
     dfs[df_name] = pd.read_csv(f"{data_dir}{df_name}.csv")
+
+for df in dfs:
+    dfs[df] = na_catfiller(dfs[df])
+    dfs[df] = str_one_hot_encoder(dfs[df], 10)
+    dfs[df] = na_numfiller(dfs[df])
 
 app = dash.Dash(external_stylesheets=[dbc.themes.BOOTSTRAP])
 
@@ -107,50 +114,124 @@ for dataset in secondary_dataset_names:
                                     )
 tabs = dbc.Tabs([dbc.Tab(tab, label=dataset) for dataset, tab in dash_datatable_tabs.items()])
 
-merge_card = dbc.Card(
+feature_engineering_card = dbc.Card(
     [
         dbc.Row([
             dbc.Col(tabs, md=8),
+            dbc.Col(children=dcc.Loading(
+                id="loading-1",
+                type="default",
+                children=[
+                    dbc.FormGroup(
+                        [
+                            dbc.Label("Numeric feature filling aggregation function:"),
+                            dcc.Dropdown(
+                                id="numfiller-func",
+                                options=[
+                                    {"label": col, "value": col} for col in ["mean", "median"]
+                                ],
+                                value="mean",
+                            ),
+                        ]
+                    ),
+                    dbc.FormGroup(
+                        [
+                            dbc.Label("Categorical feature encoding method threshold:"),
+                            dbc.Input(id="method-switch", type="number", value=10),
+                        ]
+                    ),
+                    dbc.Button("Produce Main Dataframe.", id="produce-main-df", size="lg", outline=True, color="primary"),
+                ]
+            ), md=4),
+        ]),
+    ],
+    body=True,
+)
+
+model_training_card = dbc.Card(
+    [
+        dbc.Row([
             dbc.Col(children=[
                 dbc.FormGroup(
                     [
-                        dbc.Label("Numeric feature filling aggregation function:"),
-                        dcc.Dropdown(
-                            id="numfiller-func",
-                            options=[
-                                {"label": col, "value": col} for col in ["mean", "median"]
-                            ],
-                            value="mean",
-                        ),
-                    ]
-                ),
-                dbc.FormGroup(
-                    [
-                        dbc.Label("Categorical feature encoding method threshold:"),
-                        dbc.Input(id="method-switch", type="number", value=10),
-                    ]
-                ),
-                dbc.Button("Produce Main Dataframe.", id="produce-main-df", size="lg", outline=True, color="primary"),
-                dbc.FormGroup(
-                    [
                         dbc.Label("Early Stopping Rounds:"),
-                        dbc.Input(id="early-stopping-rounds", type="number", value=300, min=0, max=800),
+                        dbc.Input(id="early-stopping-rounds", type="number", value=50, min=0, max=800),
                     ]
                 ),
+            ], md=3),
+            dbc.Col(children=[
                 dbc.FormGroup(
                     [
                         dbc.Label("Number of parallel threads:"),
                         dbc.Input(id="num-threads", type="number", value=6, min=1, max=8),
                     ]
                 ),
+            ], md=3),
+            dbc.Col(children=[
                 dbc.FormGroup(
                     [
                         dbc.Label("Test size:"),
                         dbc.Input(id="test-size", type="number", value=0.1, min=0.1, max=0.9, step=0.1),
                     ]
                 ),
-                dbc.Button("Train The Model.", id="train-model", size="lg", outline=True, color="primary"),
-            ], md=4),
+            ], md=3),
+            dbc.Col(children=[
+                dbc.FormGroup(
+                    [
+                        dbc.Label("Learning rate:"),
+                        dbc.Input(id="learning-rate", type="number", value=0.01, min=0.01, max=0.99, step=0.1),
+                    ]
+                ),
+            ], md=3),
+            dbc.Col(children=[
+                dbc.FormGroup(
+                    [
+                        dbc.Label("Number of leaves:"),
+                        dbc.Input(id="num-leaves", type="number", value=64, min=10, max=256, step=1),
+                    ]
+                ),
+            ], md=3),
+            dbc.Col(children=[
+                dbc.FormGroup(
+                    [
+                        dbc.Label("Feature fraction:"),
+                        dbc.Input(id="feature-fraction", type="number", value=0.7, min=0.1, max=1, step=0.1),
+                    ]
+                ),
+            ], md=3),
+            dbc.Col(children=[
+                dbc.FormGroup(
+                    [
+                        dbc.Label("Bagging frequency:"),
+                        dbc.Input(id="bagging-freq", type="number", value=5, min=0, max=300, step=1),
+                    ]
+                ),
+            ], md=3),
+            dbc.Col(children=[
+                dbc.FormGroup(
+                    [
+                        dbc.Label("Bagging fraction:"),
+                        dbc.Input(id="bagging-fraction", type="number", value=0.7, min=0.1, max=1, step=0.1),
+                    ]
+                ),
+            ], md=3),
+            dbc.Col(children=[
+                dbc.FormGroup(
+                    [
+                        dbc.Label("Minimum data in leaf:"),
+                        dbc.Input(id="min-data-in-leaf", type="number", value=100, min=100, max=10000, step=100),
+                    ]
+                ),
+            ], md=3),
+        ]),
+        dbc.Row([
+            dbc.Col(children=[
+                dbc.FormGroup(
+                    [
+                        dbc.Button("Train The Model.", id="train-model", size="lg", outline=True, color="primary"),
+                    ]
+                ),
+            ], md=3),
         ])
     ],
     body=True,
@@ -160,12 +241,23 @@ results_card = dbc.Card(
     [
         dbc.Row([
 
-            dbc.Col([dbc.Label("Aggregation functions dict:"),html.Pre(id="aggr-dicts-value")], md=4),
             dbc.Col([
-                dbc.Alert(
-                    id="main-df-alert",
-                    dismissable=True,
-                    is_open=False,
+                dbc.Label("Aggregation functions dict:"),
+                dcc.Loading(
+                    id="loading-2",
+                    type="default",
+                    children=html.Pre(id="aggr-dicts-value")
+                ),
+            ], md=4),
+            dbc.Col([
+                dcc.Loading(
+                    id="main-df-alert-loading",
+                    type="default",
+                    children=dbc.Alert(
+                        id="main-df-alert",
+                        dismissable=True,
+                        is_open=False,
+                    ),
                 ),
                 dbc.Alert(
                     id="model-training-alert",
@@ -173,17 +265,18 @@ results_card = dbc.Card(
                     is_open=False,
                 ),
                 dbc.Label("Model training logs:"),
-                html.Div(id="logs-text")
+                dcc.Loading(
+                    id="model-training-loading",
+                    type="default",
+                    children=html.Div(id="logs-text")
+                ),
             ], md=8),
         ])
     ],
     body=True,
 )
 
-app.layout = dcc.Loading(
-    id="loading-1",
-    fullscreen=True,
-    type="default",
+app.layout = html.Div(
     children=dbc.Container(
         [dcc.Store(id=f"{dataset}_aggr_dicts", storage_type='local') for dataset in secondary_dataset_names] +
         [dcc.Store(id="main_df_params_hash", storage_type='local')] +
@@ -193,13 +286,13 @@ app.layout = dcc.Loading(
             dbc.Row(
                 [
                     dbc.Col([
-                        html.H2("Feature engineering and model tuning"),
-                        merge_card,
+                        html.H2("Feature engineering"),
+                        feature_engineering_card,
+                        html.H2("Model tuning and training"),
+                        model_training_card,
                         html.H2("Results"),
                         results_card,
                         html.Div(id="results-display"),
-                        html.Div(id="hidden-div", style={"display":"none"}),
-                        html.Div(id="hidden-div-2", style={"display":"none"})
                     ], md=12),
                     
                 ],
@@ -233,6 +326,41 @@ def save_load_merge_tables(*args):
 
 @app.callback(
     [
+        Output("produce-main-df", "disabled"),
+        Output("train-model", "disabled"),
+    ],
+    [
+        Input("produce-main-df", "n_clicks"),
+        Input("train-model", "n_clicks"),
+        # Input("main-df-alert", "loading_state"),
+        # Input("logs-text", "loading_state"),
+    ],
+    [
+        State("main-df-alert", "loading_state"),
+        State("logs-text", "loading_state"),
+    ]
+)
+def disable_enable_button(produce_main_df_btn_clicks, train_model_btn_clicks, main_df_alert_loading, model_training_loading):
+    # print(produce_main_df_btn_clicks)
+    print(main_df_alert_loading)
+    # print(train_model_btn_clicks)
+    print(model_training_loading)
+    print("______________________")
+    if train_model_btn_clicks and model_training_loading == "is_loading":
+        return True, False
+    if produce_main_df_btn_clicks and main_df_alert_loading == "is_loading":
+        return False, True
+    return False, False
+
+# learning_rate
+# num_leaves
+# feature_fraction
+# bagging_freq
+# bagging_fraction
+# min_data_in_leaf
+
+@app.callback(
+    [
         Output("logs-text", "children"),
         Output("model-training-alert", "is_open"),
         Output("model-training-alert", "children"),
@@ -243,17 +371,29 @@ def save_load_merge_tables(*args):
         State("early-stopping-rounds", "value"),
         State("num-threads", "value"),
         State("test-size", "value"),
+        State("learning-rate", "value"),
+        State("num-leaves", "value"),
+        State("feature-fraction", "value"),
+        State("bagging-freq", "value"),
+        State("bagging-fraction", "value"),
+        State("min-data-in-leaf", "value"),
         State("numfiller-func", "value"),
         State("method-switch", "value")
     ] +
     [State(f"{dataset}_aggr_dicts", "data") for dataset in secondary_dataset_names],
 )
 def train_model_callback(*args):
-    main_df_hash = sha256({k: v for k, v in enumerate(list(args)[4:])})
+    main_df_hash = sha256({k: v for k, v in enumerate(list(args)[10:])})
     n_clicks = args[0]
     early_stopping_rounds = args[1]
     num_threads = args[2]
     test_size = args[3]
+    learning_rate = args[4]
+    num_leaves = args[5]
+    feature_fraction = args[6]
+    bagging_freq = args[7]
+    bagging_fraction = args[8]
+    min_data_in_leaf = args[9]
     logs_output = ""
     if n_clicks:
         if path.isfile(f"data/cache/{main_df_hash}.csv"):
@@ -264,8 +404,15 @@ def train_model_callback(*args):
                     main_df,
                     early_stopping_rounds=early_stopping_rounds,
                     num_threads=num_threads,
-                    test_size=test_size
+                    test_size=test_size,
+                    learning_rate=learning_rate,
+                    num_leaves=num_leaves,
+                    feature_fraction=feature_fraction,
+                    bagging_freq=bagging_freq,
+                    bagging_fraction=bagging_fraction,
+                    min_data_in_leaf=min_data_in_leaf
                 )
+                sys.stdout = original_stdout
         else:
             return dash.no_update, True, "Main Dataframe does not exist, produce it first.", "danger"
         logs_file = open('data/logs.txt', 'r')
@@ -284,7 +431,9 @@ def train_model_callback(*args):
     [State(f"{dataset}_aggr_dicts", "data") for dataset in secondary_dataset_names],
 )
 def produce_main_df(*args):
+    print({k: v for k, v in enumerate(list(args)[1:])})
     main_df_hash = sha256({k: v for k, v in enumerate(list(args)[1:])})
+    print(main_df_hash)
     n_clicks = args[0]
     numfiller_func = args[1]
     method_switch = args[2]
