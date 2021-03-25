@@ -431,9 +431,7 @@ def train_model_callback(*args):
     [State(f"{dataset}_aggr_dicts", "data") for dataset in secondary_dataset_names],
 )
 def produce_main_df(*args):
-    print({k: v for k, v in enumerate(list(args)[1:])})
     main_df_hash = sha256({k: v for k, v in enumerate(list(args)[1:])})
-    print(main_df_hash)
     n_clicks = args[0]
     numfiller_func = args[1]
     method_switch = args[2]
