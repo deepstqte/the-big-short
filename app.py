@@ -118,31 +118,42 @@ feature_engineering_card = dbc.Card(
     [
         dbc.Row([
             dbc.Col(tabs, md=8),
-            dbc.Col(children=dcc.Loading(
-                id="loading-1",
-                type="default",
-                children=[
-                    dbc.FormGroup(
-                        [
-                            dbc.Label("Numeric feature filling aggregation function:"),
-                            dcc.Dropdown(
-                                id="numfiller-func",
-                                options=[
-                                    {"label": col, "value": col} for col in ["mean", "median"]
-                                ],
-                                value="mean",
-                            ),
-                        ]
+            dbc.Col(children=[
+                dbc.FormGroup(
+                    [
+                        dbc.Label("Numeric feature filling aggregation function:"),
+                        dcc.Dropdown(
+                            id="numfiller-func",
+                            options=[
+                                {"label": col, "value": col} for col in ["mean", "median"]
+                            ],
+                            value="mean",
+                        ),
+                    ]
+                ),
+                dbc.FormGroup(
+                    [
+                        dbc.Label("Categorical feature encoding method threshold:"),
+                        dbc.Input(id="method-switch", type="number", value=10),
+                    ]
+                ),
+                dcc.Loading(
+                    id="loading-main-df-btn",
+                    type="default",
+                    children=[
+                        html.Div(dbc.Button("Produce Main Dataframe.", id="produce-main-df", size="lg", outline=True, color="primary"), id="produce-main-df-div"),
+                    ]
+                ),
+                dcc.Loading(
+                    id="main-df-alert-loading",
+                    type="default",
+                    children=dbc.Alert(
+                        id="main-df-alert",
+                        dismissable=True,
+                        is_open=False,
                     ),
-                    dbc.FormGroup(
-                        [
-                            dbc.Label("Categorical feature encoding method threshold:"),
-                            dbc.Input(id="method-switch", type="number", value=10),
-                        ]
-                    ),
-                    dbc.Button("Produce Main Dataframe.", id="produce-main-df", size="lg", outline=True, color="primary"),
-                ]
-            ), md=4),
+                ),
+            ], md=4),
         ]),
     ],
     body=True,
@@ -228,7 +239,13 @@ model_training_card = dbc.Card(
             dbc.Col(children=[
                 dbc.FormGroup(
                     [
-                        dbc.Button("Train The Model.", id="train-model", size="lg", outline=True, color="primary"),
+                        dcc.Loading(
+                            id="model-training-btn-loading",
+                            type="default",
+                            children=[
+                                html.Div(dbc.Button("Train The Model.", id="train-model", size="lg", outline=True, color="primary"), id="model-training-div"),
+                            ]
+                        ),
                     ]
                 ),
             ], md=3),
@@ -243,22 +260,9 @@ results_card = dbc.Card(
 
             dbc.Col([
                 dbc.Label("Aggregation functions dict:"),
-                dcc.Loading(
-                    id="loading-2",
-                    type="default",
-                    children=html.Pre(id="aggr-dicts-value")
-                ),
+                html.Pre(id="aggr-dicts-value"),
             ], md=4),
             dbc.Col([
-                dcc.Loading(
-                    id="main-df-alert-loading",
-                    type="default",
-                    children=dbc.Alert(
-                        id="main-df-alert",
-                        dismissable=True,
-                        is_open=False,
-                    ),
-                ),
                 dbc.Alert(
                     id="model-training-alert",
                     dismissable=True,
@@ -326,45 +330,11 @@ def save_load_merge_tables(*args):
 
 @app.callback(
     [
-        Output("produce-main-df", "disabled"),
-        Output("train-model", "disabled"),
-    ],
-    [
-        Input("produce-main-df", "n_clicks"),
-        Input("train-model", "n_clicks"),
-        # Input("main-df-alert", "loading_state"),
-        # Input("logs-text", "loading_state"),
-    ],
-    [
-        State("main-df-alert", "loading_state"),
-        State("logs-text", "loading_state"),
-    ]
-)
-def disable_enable_button(produce_main_df_btn_clicks, train_model_btn_clicks, main_df_alert_loading, model_training_loading):
-    # print(produce_main_df_btn_clicks)
-    print(main_df_alert_loading)
-    # print(train_model_btn_clicks)
-    print(model_training_loading)
-    print("______________________")
-    if train_model_btn_clicks and model_training_loading == "is_loading":
-        return True, False
-    if produce_main_df_btn_clicks and main_df_alert_loading == "is_loading":
-        return False, True
-    return False, False
-
-# learning_rate
-# num_leaves
-# feature_fraction
-# bagging_freq
-# bagging_fraction
-# min_data_in_leaf
-
-@app.callback(
-    [
         Output("logs-text", "children"),
         Output("model-training-alert", "is_open"),
         Output("model-training-alert", "children"),
         Output("model-training-alert", "color"),
+        Output("model-training-div", "children"),
     ],
     Input("train-model", "n_clicks"),
     [
@@ -414,17 +384,18 @@ def train_model_callback(*args):
                 )
                 sys.stdout = original_stdout
         else:
-            return dash.no_update, True, "Main Dataframe does not exist, produce it first.", "danger"
+            return dash.no_update, True, "Main Dataframe does not exist, produce it first.", "danger", dbc.Button("Train The Model.", id="train-model", size="lg", outline=True, color="primary")
         logs_file = open('data/logs.txt', 'r')
         logs_lines = logs_file.readlines()
         logs_output = [html.Div(line) for line in logs_lines]
-    return logs_output, False, "", "info"
+    return logs_output, False, "", "info", dbc.Button("Train The Model.", id="train-model", size="lg", outline=True, color="primary")
 
 @app.callback(
     [
         Output("main-df-alert", "is_open"),
         Output("main-df-alert", "children"),
         Output("main-df-alert", "color"),
+        Output("produce-main-df-div", "children")
     ],
     Input("produce-main-df", "n_clicks"),
     [State("numfiller-func", "value"), State("method-switch", "value")] +
@@ -456,9 +427,9 @@ def produce_main_df(*args):
             main_df.to_csv(f'data/cache/{main_df_hash}.csv', index=False)
             message = "Main Dataframe saved"
             color = "success"
-        return True, message, color
+        return True, message, color, dbc.Button("Produce Main Dataframe.", id="produce-main-df", size="lg", outline=True, color="primary")
     else:
-        return False, "", color
+        return False, "", color, dbc.Button("Produce Main Dataframe.", id="produce-main-df", size="lg", outline=True, color="primary")
 
 
 if __name__ == "__main__":
